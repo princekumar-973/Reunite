@@ -46,11 +46,38 @@ function MainAppContent() {
   const [claimTargetItem, setClaimTargetItem] = useState<Item | null>(null);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportInitialType, setReportInitialType] = useState<ItemType>('LOST');
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Fetch Items from Backend API
+  // Auth Modal State for Task Gating
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('register');
+  const [authModalPrompt, setAuthModalPrompt] = useState<string | undefined>(undefined);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+  // Require Auth Helper: Prompts registration/login before performing tasks
+  const requireAuth = (prompt: string, onAuthorized?: () => void): boolean => {
+    if (!user) {
+      setAuthModalMode('register');
+      setAuthModalPrompt(prompt);
+      if (onAuthorized) {
+        setPendingAction(() => onAuthorized);
+      } else {
+        setPendingAction(null);
+      }
+      setAuthModalOpen(true);
+      return false;
+    }
+    return true;
+  };
+
+  const handleAuthSuccess = () => {
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+    }
+  };
+
+  // Fetch Items from Backend API (Publicly readable)
   const fetchItems = useCallback(async () => {
-    if (!user) return;
     setLoading(true);
     try {
       const params: Record<string, string> = {};
@@ -69,33 +96,31 @@ function MainAppContent() {
     } finally {
       setLoading(false);
     }
-  }, [user, activeTab, selectedCategory, statusFilter, searchQuery]);
+  }, [activeTab, selectedCategory, statusFilter, searchQuery]);
 
-  // Fetch Live Statistics
+  // Fetch Live Statistics (Publicly readable)
   const fetchStats = useCallback(async () => {
-    if (!user) return;
     try {
       const res = await api.get<StatsResponse>('/v1/items/stats/');
       setStats(res.data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
-    if (user) {
-      fetchItems();
-    }
-  }, [user, fetchItems]);
+    fetchItems();
+  }, [fetchItems]);
 
   useEffect(() => {
-    if (user) {
-      fetchStats();
-    }
-  }, [user, fetchStats]);
+    fetchStats();
+  }, [fetchStats]);
 
-  // Seed sample database items
+  // Seed sample database items (Requires Auth)
   const handleSeedData = async () => {
+    if (!requireAuth('Please register or log in first to seed sample items.', () => handleSeedData())) {
+      return;
+    }
     setSeeding(true);
     try {
       await api.post('/v1/items/seed-demo/');
@@ -107,12 +132,43 @@ function MainAppContent() {
     }
   };
 
+  // Open Report Modal (Requires Auth)
   const handleOpenReport = (type: ItemType = 'LOST') => {
+    if (!requireAuth('Please register or log in to report a lost or found item.', () => {
+      setReportInitialType(type);
+      setReportModalOpen(true);
+    })) {
+      return;
+    }
     setReportInitialType(type);
     setReportModalOpen(true);
   };
 
+  // Open Claim Modal (Requires Auth)
+  const handleOpenClaim = (item: Item) => {
+    if (!requireAuth(`Please register or log in to submit a claim for "${item.title}".`, () => {
+      setClaimTargetItem(item);
+    })) {
+      return;
+    }
+    setClaimTargetItem(item);
+  };
+
+  // Handle Tab Switch (Gating Claims tab)
+  const handleTabChange = (newTab: 'feed' | 'lost' | 'found' | 'claims') => {
+    if (newTab === 'claims' && !user) {
+      requireAuth('Please register or log in to access your claims & item management workspace.', () => {
+        setActiveTab('claims');
+      });
+      return;
+    }
+    setActiveTab(newTab);
+  };
+
   const handleStatusChange = async (item: Item, newStatus: string) => {
+    if (!requireAuth('Please register or log in to update item statuses.')) {
+      return;
+    }
     try {
       await api.patch(`/v1/items/${item.id}/`, { status: newStatus });
       setSelectedItem(null);
@@ -137,26 +193,29 @@ function MainAppContent() {
     );
   }
 
-  // Authentication Gate: User MUST login to proceed
-  if (!user) {
-    return <AuthGate />;
-  }
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       
       {/* Top Fixed / Sticky Navigation */}
       <Navbar
         onOpenReport={() => handleOpenReport('LOST')}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAuth={() => {
+          setAuthModalMode('register');
+          setAuthModalPrompt(undefined);
+          setPendingAction(null);
+          setAuthModalOpen(true);
+        }}
         activeTab={activeTab}
-        setActiveTab={(t) => setActiveTab(t as any)}
+        setActiveTab={(t) => handleTabChange(t as any)}
       />
 
       {/* Main Body */}
       <main className="flex-1">
         {activeTab === 'claims' ? (
-          <ClaimsDashboard onSelectItem={(item) => setSelectedItem(item)} />
+          <ClaimsDashboard 
+            onSelectItem={(item) => setSelectedItem(item)} 
+            onOpenAuth={() => requireAuth('Please register or sign in to access your claims workspace.', () => setActiveTab('claims'))}
+          />
         ) : (
           <div>
             {/* Hero & Metrics Header */}
@@ -272,7 +331,7 @@ function MainAppContent() {
                       key={item.id}
                       item={item}
                       onSelect={(i) => setSelectedItem(i)}
-                      onClaim={(i) => setClaimTargetItem(i)}
+                      onClaim={(i) => handleOpenClaim(i)}
                     />
                   ))}
                 </div>
@@ -300,10 +359,10 @@ function MainAppContent() {
           <div>
             <h4 className="font-bold text-slate-200 uppercase tracking-wider text-[11px] mb-3">Quick Navigation</h4>
             <ul className="space-y-2">
-              <li><button onClick={() => setActiveTab('feed')} className="hover:text-indigo-400 transition-colors">All Listings</button></li>
-              <li><button onClick={() => setActiveTab('lost')} className="hover:text-indigo-400 transition-colors">Lost Belongings</button></li>
-              <li><button onClick={() => setActiveTab('found')} className="hover:text-indigo-400 transition-colors">Found Items</button></li>
-              <li><button onClick={() => setActiveTab('claims')} className="hover:text-indigo-400 transition-colors">My Claim Workspace</button></li>
+              <li><button onClick={() => handleTabChange('feed')} className="hover:text-indigo-400 transition-colors cursor-pointer">All Listings</button></li>
+              <li><button onClick={() => handleTabChange('lost')} className="hover:text-indigo-400 transition-colors cursor-pointer">Lost Belongings</button></li>
+              <li><button onClick={() => handleTabChange('found')} className="hover:text-indigo-400 transition-colors cursor-pointer">Found Items</button></li>
+              <li><button onClick={() => handleTabChange('claims')} className="hover:text-indigo-400 transition-colors cursor-pointer">My Claim Workspace</button></li>
             </ul>
           </div>
 
@@ -346,7 +405,7 @@ function MainAppContent() {
       <ItemDetailModal
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
-        onOpenClaim={(item) => setClaimTargetItem(item)}
+        onOpenClaim={(item) => handleOpenClaim(item)}
         onStatusChange={handleStatusChange}
       />
 
@@ -359,7 +418,11 @@ function MainAppContent() {
           fetchItems();
           fetchStats();
         }}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAuth={() => {
+          setAuthModalMode('register');
+          setAuthModalPrompt('Please register or sign in to submit a claim.');
+          setAuthModalOpen(true);
+        }}
       />
 
       {/* Report Item Modal */}
@@ -376,7 +439,13 @@ function MainAppContent() {
       {/* Authentication Modal */}
       <AuthModal
         isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
+        onClose={() => {
+          setAuthModalOpen(false);
+          setPendingAction(null);
+        }}
+        initialMode={authModalMode}
+        promptMessage={authModalPrompt}
+        onSuccess={handleAuthSuccess}
       />
 
     </div>

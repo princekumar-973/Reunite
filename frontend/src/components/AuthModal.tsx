@@ -14,11 +14,26 @@ import { useAuth } from '../context/AuthContext';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMode?: 'login' | 'register';
+  promptMessage?: string;
+  onSuccess?: () => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ 
+  isOpen, 
+  onClose,
+  initialMode = 'login',
+  promptMessage,
+  onSuccess
+}) => {
   const { login, register, demoLogin } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  
+  React.useEffect(() => {
+    if (isOpen && initialMode) {
+      setMode(initialMode);
+    }
+  }, [isOpen, initialMode]);
   
   // Login fields
   const [username, setUsername] = useState('');
@@ -43,6 +58,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
     try {
       await login(username, password);
+      onSuccess?.();
       onClose();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid username or password.');
@@ -64,6 +80,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         last_name: regLastName,
         phone: regPhone,
       });
+      onSuccess?.();
       onClose();
     } catch (err: any) {
       setError(
@@ -81,6 +98,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setError(null);
     try {
       await demoLogin();
+      onSuccess?.();
       onClose();
     } catch (err: any) {
       setError('Could not authenticate demo user.');
@@ -119,6 +137,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         {/* Modal Body */}
         <div className="p-6 space-y-4">
           
+          {promptMessage && (
+            <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 text-xs flex items-center gap-2.5 shadow-sm">
+              <Sparkles className="w-4 h-4 shrink-0 text-indigo-400 animate-pulse" />
+              <span className="font-medium">{promptMessage}</span>
+            </div>
+          )}
+
           {/* Quick 1-Click Demo Login Button */}
           <button
             type="button"

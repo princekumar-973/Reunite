@@ -25,9 +25,13 @@ Write-Host "[3/3] Launching Frontend at http://localhost:5173 ..." -ForegroundCo
 Start-Process cmd.exe -ArgumentList "/k cd /d `"$root\frontend`" && npm run dev" -WindowStyle Normal
 Write-Host "      [OK] Frontend launched in separate window." -ForegroundColor Green
 
-# 4. Open Browser
+# 4. Open Browser (Google Chrome if installed)
 Start-Sleep -Seconds 3
-Start-Process "http://localhost:5173"
+if (Test-Path "C:\Program Files\Google\Chrome\Application\chrome.exe") {
+    Start-Process "C:\Program Files\Google\Chrome\Application\chrome.exe" -ArgumentList "http://localhost:5173"
+} else {
+    Start-Process "http://localhost:5173"
+}
 
 Write-Host ""
 Write-Host "======================================================================" -ForegroundColor Cyan

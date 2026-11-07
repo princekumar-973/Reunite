@@ -22,9 +22,10 @@ import api from '../services/api';
 
 interface ClaimsDashboardProps {
   onSelectItem: (item: Item) => void;
+  onOpenAuth?: () => void;
 }
 
-export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({ onSelectItem }) => {
+export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({ onSelectItem, onOpenAuth }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'received' | 'sent' | 'my_items'>('received');
   const [receivedClaims, setReceivedClaims] = useState<Claim[]>([]);
@@ -34,6 +35,7 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({ onSelectItem }
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const fetchDashboardData = async () => {
+    if (!user) return;
     setLoading(true);
     try {
       const [recRes, sentRes, itemsRes] = await Promise.all([
@@ -57,8 +59,32 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({ onSelectItem }
   };
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto py-20 px-4 text-center">
+        <div className="glass-panel p-8 rounded-3xl border border-slate-800 space-y-4 shadow-2xl">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 mx-auto flex items-center justify-center">
+            <ShieldCheck className="w-7 h-7" />
+          </div>
+          <h3 className="font-extrabold text-white text-xl">Account Required</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Please register or sign in to access your claims workspace, review verification proofs, and manage your reported items.
+          </p>
+          <button
+            onClick={onOpenAuth}
+            className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+          >
+            Register / Sign In Now
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleUpdateStatus = async (claimId: string, status: 'APPROVED' | 'REJECTED') => {
     setActionLoadingId(claimId);

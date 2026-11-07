@@ -91,19 +91,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
             Found Items
           </button>
-          {user && (
-            <button
-              onClick={() => setActiveTab('claims')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'claims'
-                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
-                  : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/60'
-              }`}
-            >
-              <Inbox className="w-3.5 h-3.5" />
-              My Claims & Items
-            </button>
-          )}
+          <button
+            onClick={() => setActiveTab('claims')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              activeTab === 'claims'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/60'
+            }`}
+          >
+            <Inbox className="w-3.5 h-3.5" />
+            My Claims &amp; Items
+          </button>
         </nav>
 
         {/* Action Buttons */}
@@ -178,9 +176,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
               <button
                 onClick={onOpenAuth}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-200 bg-slate-900 border border-slate-700/80 hover:border-slate-500 hover:text-white transition-all cursor-pointer"
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
               >
-                Sign In
+                Register / Sign In
               </button>
             </div>
           )}

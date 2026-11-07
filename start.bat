@@ -30,9 +30,13 @@ echo       [OK] Frontend window launched.
 echo.
 
 :: 4. Launch Web Browser
-echo Opening browser to http://localhost:5173 in 3 seconds...
+echo Opening Chrome to http://localhost:5173 in 3 seconds...
 timeout /t 3 /nobreak >nul
-start http://localhost:5173
+if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
+    start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" "http://localhost:5173"
+) else (
+    start http://localhost:5173
+)
 
 echo ======================================================================
 echo   Reunite is now running!

@@ -11,7 +11,7 @@ def health_check(request):
     status_code = 200 if mongo_ok else 503
     return Response({
         "status": "healthy" if mongo_ok else "unhealthy",
-        "service": "Lost & Found API",
+        "service": "Reunite API",
         "django": "running",
         "mongodb": {
             "connected": mongo_ok,

@@ -8,6 +8,7 @@ import { ReportItemModal } from './components/ReportItemModal';
 import { ClaimModal } from './components/ClaimModal';
 import { ClaimsDashboard } from './components/ClaimsDashboard';
 import { AuthModal } from './components/AuthModal';
+import { AuthGate } from './components/AuthGate';
 import { Item, StatsResponse, ItemType } from './types';
 import api from './services/api';
 import { 
@@ -26,7 +27,7 @@ import {
 } from 'lucide-react';
 
 function MainAppContent() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   // Navigation and Filtering State
   const [activeTab, setActiveTab] = useState<'feed' | 'lost' | 'found' | 'claims'>('feed');
@@ -49,6 +50,7 @@ function MainAppContent() {
 
   // Fetch Items from Backend API
   const fetchItems = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     try {
       const params: Record<string, string> = {};
@@ -67,25 +69,30 @@ function MainAppContent() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, selectedCategory, statusFilter, searchQuery]);
+  }, [user, activeTab, selectedCategory, statusFilter, searchQuery]);
 
   // Fetch Live Statistics
   const fetchStats = useCallback(async () => {
+    if (!user) return;
     try {
       const res = await api.get<StatsResponse>('/v1/items/stats/');
       setStats(res.data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+    if (user) {
+      fetchItems();
+    }
+  }, [user, fetchItems]);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    if (user) {
+      fetchStats();
+    }
+  }, [user, fetchStats]);
 
   // Seed sample database items
   const handleSeedData = async () => {
@@ -114,6 +121,26 @@ function MainAppContent() {
       console.error('Error changing item status:', err);
     }
   };
+
+  // Loading Session State
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4 text-white">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center shadow-xl shadow-indigo-500/25 animate-pulse">
+          <Sparkles className="w-8 h-8 text-white" />
+        </div>
+        <div className="flex items-center gap-2 text-indigo-400 font-semibold tracking-wide text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Connecting to Reunite...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Authentication Gate: User MUST login to proceed
+  if (!user) {
+    return <AuthGate />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -261,9 +288,9 @@ function MainAppContent() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
-                LF
+                RU
               </div>
-              <span className="font-bold text-white text-sm">FindIt Platform</span>
+              <span className="font-bold text-white text-sm">Reunite Platform</span>
             </div>
             <p className="text-slate-400 text-xs leading-relaxed">
               Decentralized, verification-backed lost and found system for university campuses, public hubs, and student centers.
@@ -310,8 +337,8 @@ function MainAppContent() {
         </div>
 
         <div className="max-w-7xl mx-auto pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-          <p>© 2026 FindIt Lost & Found Platform. All rights reserved.</p>
-          <p>Built with enterprise security standards & MongoDB backend.</p>
+          <p>© {new Date().getFullYear()} Reunite Lost &amp; Found Platform. All rights reserved.</p>
+          <p>Built with enterprise security standards &amp; MongoDB backend.</p>
         </div>
       </footer>
 

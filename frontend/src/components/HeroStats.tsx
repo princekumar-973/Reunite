@@ -56,7 +56,7 @@ export const HeroStats: React.FC<HeroStatsProps> = ({
         <div className="text-center max-w-3xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-4">
             <Radio className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-            Live Campus Lost & Found Registry
+            Reunite • Lost &amp; Found Registry
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
             Lost Something? <br />

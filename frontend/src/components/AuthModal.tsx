@@ -103,9 +103,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </div>
             <div>
               <h3 className="font-bold text-base text-white">
-                {mode === 'login' ? 'Sign In to FindIt' : 'Create an Account'}
+                {mode === 'login' ? 'Sign In to Reunite' : 'Create an Account'}
               </h3>
-              <p className="text-[11px] text-slate-400">Campus Lost & Found Platform</p>
+              <p className="text-[11px] text-slate-400">Lost &amp; Found Community Platform</p>
             </div>
           </div>
           <button

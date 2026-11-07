@@ -16,7 +16,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
 class ItemListCreateView(generics.ListCreateAPIView):
     serializer_class = ItemSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         queryset = Item.objects.all()

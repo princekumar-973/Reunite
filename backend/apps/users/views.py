@@ -59,3 +59,40 @@ class CurrentUserView(APIView):
         profile.save()
 
         return Response(UserSerializer(user).data)
+
+
+class DemoAuthView(APIView):
+    """Automatically logs in or creates the demo user on first use."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        user, created = User.objects.get_or_create(
+            username='demo_user',
+            defaults={
+                'email': 'demo@reunite.app',
+                'first_name': 'Demo',
+                'last_name': 'User',
+            }
+        )
+        if created:
+            user.set_password('password123')
+            user.save()
+            UserProfile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'phone': '+1 (555) 019-2834',
+                    'department': 'Campus Community',
+                    'campus_location': 'Main Library Plaza'
+                }
+            )
+
+        refresh = RefreshToken.for_user(user)
+        user_data = UserSerializer(user).data
+        return Response({
+            "message": "Demo login successful",
+            "user": user_data,
+            "tokens": {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            }
+        }, status=status.HTTP_200_OK)

@@ -66,7 +66,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const demoLogin = async () => {
-    await login('demo_user', 'password123');
+    try {
+      const res = await api.post<{ tokens: { access: string; refresh: string }; user: User }>(
+        '/v1/auth/demo/'
+      );
+      if (res.data?.tokens) {
+        localStorage.setItem('access_token', res.data.tokens.access);
+        localStorage.setItem('refresh_token', res.data.tokens.refresh);
+        setUser(res.data.user);
+      }
+    } catch (err) {
+      await login('demo_user', 'password123');
+    }
   };
 
   const logout = () => {

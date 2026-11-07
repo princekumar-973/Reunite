@@ -25,7 +25,13 @@ SECRET_KEY = os.environ.get(
 )
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+raw_allowed_hosts = os.environ.get(
+    "ALLOWED_HOSTS", 
+    "localhost,127.0.0.1,reunite-qcso.vercel.app,.vercel.app"
+).split(",")
+ALLOWED_HOSTS = [h.strip() for h in raw_allowed_hosts if h.strip()]
+if ".vercel.app" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.extend([".vercel.app", "reunite-qcso.vercel.app"])
 
 # ---------------------------------------------
 # Application definition
@@ -168,10 +174,24 @@ SIMPLE_JWT = {
 # ---------------------------------------------
 # CORS Configuration
 # ---------------------------------------------
-CORS_ALLOWED_ORIGINS = os.environ.get(
+raw_cors = os.environ.get(
     "CORS_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173",
+    "http://localhost:5173,http://127.0.0.1:5173,https://reunite-xi.vercel.app",
 ).split(",")
+CORS_ALLOWED_ORIGINS = [c.strip() for c in raw_cors if c.strip()]
+if "https://reunite-xi.vercel.app" not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append("https://reunite-xi.vercel.app")
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https:\/\/.*\.vercel\.app$",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://reunite-xi.vercel.app",
+    "https://reunite-qcso.vercel.app",
+]
 
 CORS_ALLOW_CREDENTIALS = True
 

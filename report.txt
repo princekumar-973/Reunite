@@ -577,68 +577,136 @@ Filing Status     : Active & Compliant
 A. APPENDICES
 ================================================================================
 
-A.1 APPENDIX 1: MONGODB DATABASE SCHEMA & COLLECTION ARCHITECTURE
+A.1 APPENDIX 1: COMPLETE DATABASE SCHEMA, TABLE STRUCTURE & DATA DICTIONARY
 
-1. Collection: `users`
-{
-  "_id": ObjectId("..."),
-  "username": "string (unique)",
-  "email": "string (unique)",
-  "password": "string (pbkdf2_sha256 hash)",
-  "first_name": "string",
-  "last_name": "string",
-  "date_joined": "ISODate",
-  "is_active": true
-}
+The Reunite platform employs a high-performance MongoDB NoSQL database orchestrated 
+via Django's ORM and PyMongo direct driver. Below is the exhaustive structural 
+definition, data dictionary, constraints, and relationships for every collection.
 
-2. Collection: `user_profiles`
-{
-  "_id": ObjectId("..."),
-  "user_id": ObjectId("..."),
-  "phone": "string",
-  "department": "string",
-  "campus_location": "string",
-  "avatar_url": "string"
-}
+================================================================================
+TABLE 1: `auth_user` (MongoDB Collection: `users`)
+================================================================================
+Description: Core authentication entity storing user credentials and identity.
 
-3. Collection: `items`
-{
-  "_id": ObjectId("..."),
-  "title": "string",
-  "item_type": "string (LOST | FOUND)",
-  "category": "string (ELECTRONICS | WALLETS_CARDS | KEYS | BAGS_BACKPACKS | ...)",
-  "status": "string (OPEN | CLAIMED | RESOLVED)",
-  "description": "string",
-  "location": "string",
-  "campus_area": "string",
-  "latitude": "double (nullable)",
-  "longitude": "double (nullable)",
-  "date_lost_or_found": "Date",
-  "brand": "string",
-  "primary_color": "string",
-  "image_url": "string",
-  "contact_email": "string",
-  "contact_phone": "string",
-  "secret_verification_question": "string",
-  "posted_by_id": ObjectId("..."),
-  "created_at": "ISODate",
-  "updated_at": "ISODate"
-}
+Attribute Name | Data Type      | Constraints       | Default | Description
+---------------|----------------|-------------------|---------|---------------------------------------------
+id / _id       | ObjectId / Int | PRIMARY KEY, Auto | None    | Unique identifier for each registered user.
+username       | VARCHAR(150)   | UNIQUE, NOT NULL  | None    | Unique handle chosen by user for login.
+password       | VARCHAR(128)   | NOT NULL          | None    | Cryptographic PBKDF2 SHA-256 hashed string.
+email          | VARCHAR(254)   | NOT NULL, Email   | ''      | Institutional/personal contact email.
+first_name     | VARCHAR(150)   | NULLABLE          | ''      | User's legal first name.
+last_name      | VARCHAR(150)   | NULLABLE          | ''      | User's legal surname / family name.
+is_staff       | BOOLEAN        | NOT NULL          | False   | Flag granting access to administrative tools.
+is_active      | BOOLEAN        | NOT NULL          | True    | Operational status of account.
+is_superuser   | BOOLEAN        | NOT NULL          | False   | Superuser permissions flag.
+date_joined    | DATETIME (ISO) | NOT NULL          | now()   | Exact registration timestamp.
+last_login     | DATETIME (ISO) | NULLABLE          | None    | Timestamp of most recent JWT authentication.
 
-4. Collection: `claims`
-{
-  "_id": ObjectId("..."),
-  "item_id": ObjectId("..."),
-  "claimant_id": ObjectId("..."),
-  "status": "string (PENDING | APPROVED | REJECTED)",
-  "message": "string",
-  "proof_description": "string",
-  "secret_question_answer": "string",
-  "contact_phone": "string",
-  "owner_notes": "string",
-  "created_at": "ISODate",
-  "updated_at": "ISODate"
-}
+Indexes:
+- PRIMARY KEY (`_id`)
+- UNIQUE INDEX (`username`)
+
+--------------------------------------------------------------------------------
+TABLE 2: `users_userprofile` (MongoDB Collection: `user_profiles`)
+--------------------------------------------------------------------------------
+Description: One-to-one extension storing personal contact & campus metadata.
+
+Attribute Name | Data Type      | Constraints       | Default | Description
+---------------|----------------|-------------------|---------|---------------------------------------------
+id / _id       | ObjectId / Int | PRIMARY KEY, Auto | None    | Unique profile record identifier.
+user_id        | ForeignKey     | UNIQUE, CASCADE   | None    | References `auth_user.id` (1-to-1 mapping).
+phone          | VARCHAR(30)    | NULLABLE          | ''      | Mobile contact number for claim handovers.
+department     | VARCHAR(120)   | NULLABLE          | ''      | Academic faculty / administrative department.
+campus_location| VARCHAR(160)   | NULLABLE          | ''      | Primary campus block, hostel, or office.
+avatar_url     | URL / TEXT     | NULLABLE          | ''      | External/Cloudinary avatar profile image URL.
+created_at     | DATETIME (ISO) | NOT NULL          | now()   | Record creation timestamp.
+updated_at     | DATETIME (ISO) | NOT NULL          | now()   | Timestamp of last profile edit.
+
+Indexes:
+- PRIMARY KEY (`_id`)
+- UNIQUE INDEX (`user_id`)
+
+--------------------------------------------------------------------------------
+TABLE 3: `items_item` (MongoDB Collection: `items`)
+--------------------------------------------------------------------------------
+Description: Central lost and found registry storing all reported possessions.
+
+Attribute Name | Data Type      | Constraints       | Default | Description
+---------------|----------------|-------------------|---------|---------------------------------------------
+id / _id       | ObjectId / Int | PRIMARY KEY, Auto | None    | Unique item tracking identifier.
+title          | VARCHAR(200)   | NOT NULL          | None    | Descriptive title of the misplaced item.
+item_type      | VARCHAR(10)    | ENUM, NOT NULL    | 'LOST'  | Type: 'LOST' (Misplaced) or 'FOUND' (Recovered).
+category       | VARCHAR(30)    | ENUM, NOT NULL    | 'OTHER' | 'ELECTRONICS', 'WALLETS_CARDS', 'KEYS', 
+               |                |                   |         | 'BAGS_BACKPACKS', 'CLOTHING_ACCESSORIES', 
+               |                |                   |         | 'BOOKS_STATIONERY', 'JEWELRY_WATCHES', 'OTHER'.
+status         | VARCHAR(20)    | ENUM, NOT NULL    | 'OPEN'  | 'OPEN' (Active), 'CLAIMED' (Reviewing), 
+               |                |                   |         | 'RESOLVED' (Reunited), 'CLOSED'.
+description    | TEXT           | NOT NULL          | None    | Detailed physical features, circumstances.
+location       | VARCHAR(255)   | NOT NULL          | None    | Physical description of spot (e.g. Library 2F).
+campus_area    | VARCHAR(100)   | NULLABLE          | ''      | General campus quadrant (e.g. North Campus).
+latitude       | DOUBLE FLOAT   | NULLABLE          | None    | Geolocation GPS latitude (e.g. 31.2536).
+longitude      | DOUBLE FLOAT   | NULLABLE          | None    | Geolocation GPS longitude (e.g. 75.7037).
+date_lost_or_found| DATE        | NOT NULL          | None    | Date when item was lost or discovered.
+primary_color  | VARCHAR(50)    | NULLABLE          | ''      | Dominant color (e.g. Space Gray, Navy Blue).
+brand          | VARCHAR(100)   | NULLABLE          | ''      | Manufacturer / label (e.g. Apple, Dell, Titan).
+image_url      | TEXT           | NULLABLE          | ''      | Public web image URL or Unsplash stock photo.
+image          | VARCHAR / FILE | NULLABLE          | None    | Upload path for camera snapshot (`items/`).
+contact_email  | VARCHAR(254)   | NOT NULL, Email   | None    | Point-of-contact email for item finder/owner.
+contact_phone  | VARCHAR(30)    | NULLABLE          | ''      | Telephone/WhatsApp contact number.
+secret_verification_question|TEXT| NULLABLE         | ''      | Private challenge question to verify ownership.
+posted_by_id   | ForeignKey     | SET_NULL, NULLABLE| None    | References `auth_user.id` (Creator/Reporter).
+created_at     | DATETIME (ISO) | NOT NULL          | now()   | Timestamp when report was first submitted.
+updated_at     | DATETIME (ISO) | NOT NULL          | now()   | Timestamp of latest edit / status update.
+
+Indexes:
+- PRIMARY KEY (`_id`)
+- INDEX (`posted_by_id`)
+- INDEX (`created_at` DESC)
+- COMPOUND INDEX (`category`, `status`, `item_type`)
+
+--------------------------------------------------------------------------------
+TABLE 4: `claims_claim` (MongoDB Collection: `claims`)
+--------------------------------------------------------------------------------
+Description: Claim verification tickets linking claimants to found possessions.
+
+Attribute Name | Data Type      | Constraints       | Default | Description
+---------------|----------------|-------------------|---------|---------------------------------------------
+id / _id       | ObjectId / Int | PRIMARY KEY, Auto | None    | Unique claim verification ticket ID.
+item_id        | ForeignKey     | CASCADE, NOT NULL | None    | References `items_item.id` (Subject of claim).
+claimant_id    | ForeignKey     | CASCADE, NOT NULL | None    | References `auth_user.id` (Claiming user).
+status         | VARCHAR(20)    | ENUM, NOT NULL    |'PENDING'| 'PENDING', 'APPROVED', 'REJECTED', 'WITHDRAWN'.
+proof_description| TEXT         | NOT NULL          | None    | Identifying marks, serials, internal contents.
+proof_image    | VARCHAR / FILE | NULLABLE          | None    | Receipt, warranty card or proof photo upload.
+proof_image_url| VARCHAR(600)   | NULLABLE          | ''      | Hosted URL of proof documentation.
+secret_question_answer| TEXT    | NULLABLE          | ''      | Claimant's answer to finder's secret question.
+contact_phone  | VARCHAR(30)    | NULLABLE          | ''      | Claimant's verified phone number for pickup.
+owner_notes    | TEXT           | NULLABLE          | ''      | Finder's decision justification or pickup notes.
+created_at     | DATETIME (ISO) | NOT NULL          | now()   | Exact timestamp when claim was lodged.
+updated_at     | DATETIME (ISO) | NOT NULL          | now()   | Timestamp when claim was reviewed/updated.
+
+Indexes:
+- PRIMARY KEY (`_id`)
+- INDEX (`item_id`)
+- INDEX (`claimant_id`)
+- INDEX (`status`)
+
+================================================================================
+ENTITY-RELATIONSHIP (ER) CARDINALITY & ARCHITECTURAL MAPPINGS
+================================================================================
+
+1. `auth_user` (1) <---------> (1) `users_userprofile`
+   - One user profile is automatically generated per user record via Django `post_save` signals.
+
+2. `auth_user` (1) <---------> (0..N) `items_item`
+   - A single registered user can report zero or multiple lost or found items.
+   - If a user account is deleted, reported items are retained (`on_delete=SET_NULL`).
+
+3. `items_item` (1) <---------> (0..N) `claims_claim`
+   - A found item can receive multiple competing verification claims.
+   - If an item record is deleted, associated claims cascade delete (`on_delete=CASCADE`).
+
+4. `auth_user` (1) <---------> (0..N) `claims_claim`
+   - A registered user can lodge multiple claims across different found belongings.
 
 --------------------------------------------------------------------------------
 A.2 APPENDIX 2: RESTFUL API ENDPOINT SPECIFICATIONS & SAMPLE PAYLOADS
@@ -699,3 +767,4 @@ A.2 APPENDIX 2: RESTFUL API ENDPOINT SPECIFICATIONS & SAMPLE PAYLOADS
 ================================================================================
                               END OF SRS DOCUMENT
 ================================================================================
+

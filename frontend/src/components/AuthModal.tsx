@@ -83,11 +83,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onSuccess?.();
       onClose();
     } catch (err: any) {
-      setError(
-        err.response?.data?.username?.[0] || 
-        err.response?.data?.email?.[0] || 
-        'Registration failed. Please check inputs.'
-      );
+      let errorMsg = 'Registration failed. Please check inputs.';
+      if (err.response?.data) {
+        const d = err.response.data;
+        if (typeof d === 'string') {
+          errorMsg = d;
+        } else if (d.detail) {
+          errorMsg = d.detail;
+        } else if (d.message) {
+          errorMsg = d.message;
+        } else {
+          const fields = ['username', 'email', 'password', 'non_field_errors'];
+          for (const f of fields) {
+            if (d[f]) {
+              const val = Array.isArray(d[f]) ? d[f][0] : d[f];
+              errorMsg = `${f}: ${val}`;
+              break;
+            }
+          }
+        }
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

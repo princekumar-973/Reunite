@@ -50,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     localStorage.setItem('access_token', res.data.access);
     localStorage.setItem('refresh_token', res.data.refresh);
+    api.defaults.headers.common['Authorization'] = `Bearer ${res.data.access}`;
     await fetchUser();
   };
 
@@ -61,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (res.data?.tokens) {
       localStorage.setItem('access_token', res.data.tokens.access);
       localStorage.setItem('refresh_token', res.data.tokens.refresh);
+      api.defaults.headers.common['Authorization'] = `Bearer ${res.data.tokens.access}`;
       setUser(res.data.user);
     }
   };
@@ -83,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    delete api.defaults.headers.common['Authorization'];
     setUser(null);
   };
 

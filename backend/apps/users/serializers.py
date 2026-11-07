@@ -43,7 +43,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=validated_data.get('last_name', '')
         )
 
-        profile = user.profile
+        profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.phone = phone
         profile.department = department
         profile.campus_location = campus_location
